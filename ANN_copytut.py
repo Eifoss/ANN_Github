@@ -1,58 +1,12 @@
 import numpy as np
 
 
-def sigmoid(x, deriv=False):
-    if deriv:
+def nonlin(x, deriv=False):
+    if (deriv == True):
         return x * (1 - x)
 
     return 1 / (1 + np.exp(-x))
 
-
-def relu(x, deriv=False):
-    if deriv:
-        outlist = []
-        xflat = x.flatten()
-        for xp in xflat:
-            if xp > 0:
-                outlist.append(1)
-            else:
-                outlist.append(0)
-            return outlist
-    outlist = []
-    xflat = x.flatten()
-    for xp in xflat:
-        if xp > 0:
-            outlist.append(xp)
-        else:
-            outlist.append(0)
-    outlist = np.array(outlist)
-    outlist = outlist.reshape(x.shape)
-    return outlist
-
-
-def relumod(x, deriv=False):
-    if deriv:
-        outlist = []
-        xflat = x.flatten()
-        for xp in xflat:
-            if xp > 0:
-                outlist.append(1)
-            else:
-                outlist.append(0.01)
-            return outlist
-    outlist = []
-    xflat = x.flatten()
-    for xp in xflat:
-        if xp > 0:
-            outlist.append(xp)
-        else:
-            outlist.append(xp*0.01)
-    outlist = np.array(outlist)
-    outlist = outlist.reshape(x.shape)
-    return outlist
-
-
-nonlin = sigmoid
 
 X = np.array([[0, 0, 1],
               [0, 1, 1],
@@ -70,7 +24,7 @@ np.random.seed(1)
 syn0 = 2 * np.random.random((3, 4)) - 1
 syn1 = 2 * np.random.random((4, 1)) - 1
 
-for j in range(60000):
+for j in xrange(60000):
 
     # Feed forward through layers 0, 1, and 2
     l0 = X
@@ -97,5 +51,3 @@ for j in range(60000):
 
     syn1 += l1.T.dot(l2_delta)
     syn0 += l0.T.dot(l1_delta)
-
-print(l2)
