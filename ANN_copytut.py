@@ -24,7 +24,7 @@ np.random.seed(1)
 syn0 = 2 * np.random.random((3, 4)) - 1
 syn1 = 2 * np.random.random((4, 1)) - 1
 
-for j in xrange(60000):
+for j in range(60000):
 
     # Feed forward through layers 0, 1, and 2
     l0 = X
@@ -35,8 +35,7 @@ for j in xrange(60000):
     l2_error = y - l2
 
     if (j % 10000) == 0:
-        print
-        "Error:" + str(np.mean(np.abs(l2_error)))
+        print("Error:" + str(np.mean(np.abs(l2_error))))
 
     # in what direction is the target value?
     # were we really sure? if so, don't change too much.
@@ -51,3 +50,5 @@ for j in xrange(60000):
 
     syn1 += l1.T.dot(l2_delta)
     syn0 += l0.T.dot(l1_delta)
+
+print(l2)
