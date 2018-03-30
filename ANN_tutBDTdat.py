@@ -9,6 +9,8 @@ def sigmoid(x, deriv=False):
 
 
 def relu(x, deriv=False):
+    if type(x) == list:
+        x = np.array(x)
     if deriv:
         outlist = []
         xflat = x.flatten()
@@ -17,7 +19,9 @@ def relu(x, deriv=False):
                 outlist.append(1)
             else:
                 outlist.append(0)
-            return outlist
+        outlist = np.array(outlist)
+        outlist = outlist.reshape(x.shape)
+        return outlist
     outlist = []
     xflat = x.flatten()
     for xp in xflat:
@@ -31,6 +35,9 @@ def relu(x, deriv=False):
 
 
 def relumod(x, deriv=False):
+    slope = 0.1
+    if type(x) == list:
+        x = np.array(x)
     if deriv:
         outlist = []
         xflat = x.flatten()
@@ -38,73 +45,79 @@ def relumod(x, deriv=False):
             if xp > 0:
                 outlist.append(1)
             else:
-                outlist.append(0.01)
-            return outlist
+                outlist.append(slope)
+        outlist = np.array(outlist)
+        outlist = outlist.reshape(x.shape)
+        return outlist
     outlist = []
     xflat = x.flatten()
     for xp in xflat:
         if xp > 0:
             outlist.append(xp)
         else:
-            outlist.append(xp*0.01)
+            outlist.append(xp * slope)
     outlist = np.array(outlist)
     outlist = outlist.reshape(x.shape)
     return outlist
 
-data = np.genfromtxt('/Users/idastoustrup/Documents/Dropbox/Skole/Fysiske Fag/4. year/AnvStat2/Exercises/Week 6/BDTs/BDT_16var.txt')
+
+data = np.genfromtxt('/Users/idastoustrup/Documents/Dropbox/Skole/Fysiske Fag/4. year/AnvStat2/Exercises/Week 6/'
+                     'BDTs/BDT_16var.txt')
 data = data.T
 data = data[1:len(data)]
 data = data.T
 endtrain = int(len(data)/2)
 datatest = data[endtrain:len(data)]
-data = data[0:endtrain]
+datatrain = data[0:endtrain]
+Ndhalf = len(datatrain)/2
+y = [0, 1]*int(Ndhalf)
+y = np.array(y)
+y = y.reshape(5000,1)
+X = np.array(datatrain)
 
-nonlin = sigmoid
-
-X = np.array([[0, 0, 1],
-              [0, 1, 1],
-              [1, 0, 1],
-              [1, 1, 1]])
-
-y = np.array([[0],
-              [1],
-              [1],
-              [0]])
+nonlin = relu
+LR = 0.3
 
 np.random.seed(1)
 
-nodeam = 3
+layersize = [len(X[0]), len(X[0]), 1]
 
 
 # randomly initialize our weights with mean 0
-syn0 = 2 * np.random.random((3, 4)) - 1
-syn1 = 2 * np.random.random((4, 1)) - 1
+syn = [0] * len(layersize)
+for i in range(0, len(layersize)-1):
+    syn[i] = 2 * np.random.random((layersize[i], layersize[i+1])) - 1
+
+NLayers = len(layersize)
+
+layers = [0] * NLayers
+lerrors = [0] * NLayers
+ldeltas = [0] * NLayers
 
 for j in range(60000):
 
-    # Feed forward through layers 0, 1, and 2
-    l0 = X
-    l1 = nonlin(np.dot(l0, syn0))
-    l2 = nonlin(np.dot(l1, syn1))
+    # Feed forward through all layers
+    layers[0] = X
+    for i in range(1, NLayers):
+        layers[i] = nonlin(np.dot(layers[i-1], syn[i-1]))
 
     # how much did we miss the target value?
-    l2_error = y - l2
+    lerrors[-1] = y - layers[-1]
 
-    if (j % 10000) == 0:
-        print("The error has been decreased to:" + str(np.mean(np.abs(l2_error))))
+    for i in range(NLayers - 1, 0, -1):
+        # in what direction is the target value?
+        # were we really sure? if so, don't change too much.
+        ldeltas[i] = lerrors[i] * nonlin(layers[i], deriv=True)
+        # how much did each l1 value contribute to the l2 error (according to the weights)?
+        lerrors[i-1] = ldeltas[i].dot(syn[i-1].T)
 
-    # in what direction is the target value?
-    # were we really sure? if so, don't change too much.
-    l2_delta = l2_error * nonlin(l2, deriv=True)
+        # # in what direction is the target l1?
+        # # were we really sure? if so, don't change too much.
+        # ldeltas[i-1] = lerrors[i-1] * nonlin(layers[i-1], deriv=True)
+        syn[i-1] += layers[i-1].T.dot(ldeltas[i]) * LR
 
-    # how much did each l1 value contribute to the l2 error (according to the weights)?
-    l1_error = l2_delta.dot(syn1.T)
+    if j % 10000 == 0:
+        print("The error has been decreased to:" + str(np.mean(np.abs(lerrors[-1]))))
 
-    # in what direction is the target l1?
-    # were we really sure? if so, don't change too much.
-    l1_delta = l1_error * nonlin(l1, deriv=True)
 
-    syn1 += l1.T.dot(l2_delta)
-    syn0 += l0.T.dot(l1_delta)
-
-print(l2)
+print(layers[-1])

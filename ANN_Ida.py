@@ -9,6 +9,8 @@ def sigmoid(x, deriv=False):
 
 
 def relu(x, deriv=False):
+    if type(x) == list:
+        x = np.array(x)
     if deriv:
         outlist = []
         xflat = x.flatten()
@@ -17,7 +19,9 @@ def relu(x, deriv=False):
                 outlist.append(1)
             else:
                 outlist.append(0)
-            return outlist
+        outlist = np.array(outlist)
+        outlist = outlist.reshape(x.shape)
+        return outlist
     outlist = []
     xflat = x.flatten()
     for xp in xflat:
@@ -31,6 +35,9 @@ def relu(x, deriv=False):
 
 
 def relumod(x, deriv=False):
+    slope = 0.1
+    if type(x) == list:
+        x = np.array(x)
     if deriv:
         outlist = []
         xflat = x.flatten()
@@ -38,21 +45,24 @@ def relumod(x, deriv=False):
             if xp > 0:
                 outlist.append(1)
             else:
-                outlist.append(0.01)
-            return outlist
+                outlist.append(slope)
+        outlist = np.array(outlist)
+        outlist = outlist.reshape(x.shape)
+        return outlist
     outlist = []
     xflat = x.flatten()
     for xp in xflat:
         if xp > 0:
             outlist.append(xp)
         else:
-            outlist.append(xp*0.01)
+            outlist.append(xp * slope)
     outlist = np.array(outlist)
     outlist = outlist.reshape(x.shape)
     return outlist
 
 
-nonlin = sigmoid
+nonlin = relu
+LR = 0.3
 
 X = np.array([[0, 0, 1],
               [0, 1, 1],
@@ -100,7 +110,7 @@ for j in range(60000):
         # # in what direction is the target l1?
         # # were we really sure? if so, don't change too much.
         # ldeltas[i-1] = lerrors[i-1] * nonlin(layers[i-1], deriv=True)
-        syn[i-1] += layers[i-1].T.dot(ldeltas[i])
+        syn[i-1] += layers[i-1].T.dot(ldeltas[i]) * LR
 
     if j % 10000 == 0:
         print("The error has been decreased to:" + str(np.mean(np.abs(lerrors[-1]))))
