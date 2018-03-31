@@ -71,6 +71,8 @@ def add_bias(x, how='column'):
     return X_new
 
 
+###################################### Import data ##############################################
+
 useadvBDTdat = False
 usesimBDTdat = True
 
@@ -131,18 +133,34 @@ for i in range(len(X[0])):
     rangex = abs(minx) + maxx
     X.T[i] = X.T[i]/rangex
 
+####################################### Network settings ###############################################
+
+np.random.seed(1)
+
 nonlin = sigmoid
 LR = 0.01
 layersize = [len(X[0]), len(X[0])*4, len(X[0])*3, 1]
 
 ###################################### Train the network #########################################################
 
-np.random.seed(1)
+# Bias
+
+bias = False
+
+if bias:
+    X = add_bias(X)
 
 # randomly initialize our weights with mean 0
-weights = [0] * len(layersize)
-for i in range(0, len(layersize)-1):
-    weights[i] = 2 * np.random.random((layersize[i], layersize[i+1])) - 1
+
+if bias:
+
+    weights = [0] * len(layersize)
+    for i in range(0, len(layersize)-1):
+        weights[i] = 2 * np.random.random((layersize[i] + 1, layersize[i + 1])) - 1
+else:
+    weights = [0] * len(layersize)
+    for i in range(0, len(layersize) - 1):
+        weights[i] = 2 * np.random.random((layersize[i], layersize[i + 1])) - 1
 
 NLayers = len(layersize)
 
@@ -150,29 +168,33 @@ layers = [0] * NLayers
 lerrors = [0] * NLayers
 ldeltas = [0] * NLayers
 
-Nit = 30000
+Nit = 15000
 
 for j in range(Nit):
 
-    # Feed forward through all layers
+    ############ FEED FORWARD ###########
+
     layers[0] = X
     for i in range(1, NLayers):
         layers[i] = nonlin(np.dot(layers[i-1], weights[i-1]))
+        if bias and not i == NLayers - 1:
+            layers[i] = add_bias(layers[i])
 
-    # how much did we miss the target value?
+    ########### FEED BACKWARDS #########
+
     lerrors[-1] = y - layers[-1]
-
     for i in range(NLayers - 1, 0, -1):
-        # in what direction is the target value?
-        # were we really sure? if so, don't change too much.
-        ldeltas[i] = lerrors[i] * nonlin(layers[i], deriv=True)
-        # how much did each l1 value contribute to the l2 error (according to the weights)?
-        lerrors[i-1] = ldeltas[i].dot(weights[i-1].T)
 
-        # # in what direction is the target l1?
-        # # were we really sure? if so, don't change too much.
-        # ldeltas[i-1] = lerrors[i-1] * nonlin(layers[i-1], deriv=True)
-        weights[i-1] += layers[i-1].T.dot(ldeltas[i]) * LR
+        ldeltas[i] = lerrors[i] * nonlin(layers[i], deriv=True)
+
+        if bias and i < NLayers - 1:
+            ldeltasn = ldeltas[i][:, 1:]
+            lerrors[i - 1] = ldeltasn.dot(weights[i - 1].T)
+            weights[i - 1] += layers[i - 1].T.dot(ldeltasn) * LR
+
+        else:
+            lerrors[i - 1] = ldeltas[i].dot(weights[i - 1].T)
+            weights[i - 1] += layers[i - 1].T.dot(ldeltas[i]) * LR
 
     if j % 1000 == 0:
         print("\nj is %i out of %i"%(j, Nit))
@@ -185,12 +207,20 @@ for i in range(5):
     print("Class should have been %i, the ANN guesses %f"%(y[i], layers[-1][i]))
 
 telayers = [0] * NLayers
-telayers[0] = np.concatenate((datateb, datates), axis=0)
+teX = np.concatenate((datateb, datates), axis=0)
+
+for i in range(len(teX[0])):
+    minx = min(teX.T[i])
+    maxx = max(teX.T[i])
+    rangex = abs(minx) + maxx
+    teX.T[i] = teX.T[i]/rangex
+
+telayers[0] = teX
 
 for i in range(1, NLayers):
     telayers[i] = nonlin(np.dot(telayers[i-1], weights[i-1]))
 
 tey = np.append(np.zeros(len(datateb)), np.ones(len(datates)))
-tey = tey.reshape(len(X), 1)
+tey = tey.reshape(len(teX), 1)
 
 print("The error for the test set is:" + str(np.mean(np.abs(tey - telayers[-1]))))
