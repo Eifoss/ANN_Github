@@ -12,25 +12,28 @@ def relu(x, deriv=False):
     if type(x) == list:
         x = np.array(x)
     if deriv:
-        outlist = []
-        xflat = x.flatten()
-        for xp in xflat:
-            if xp > 0:
-                outlist.append(1)
-            else:
-                outlist.append(0)
-        outlist = np.array(outlist)
-        outlist = outlist.reshape(x.shape)
+        # outlist = []
+        # xflat = x.flatten()
+        # for xp in xflat:
+        #     if xp > 0:
+        #         outlist.append(1)
+        #     else:
+        #         outlist.append(0)
+        # outlist = np.array(outlist)
+        # outlist = outlist.reshape(x.shape)
+        outlist = x > 0
+        outlist = outlist.astype(int)
         return outlist
-    outlist = []
-    xflat = x.flatten()
-    for xp in xflat:
-        if xp > 0:
-            outlist.append(xp)
-        else:
-            outlist.append(0)
-    outlist = np.array(outlist)
-    outlist = outlist.reshape(x.shape)
+    # outlist = []
+    # xflat = x.flatten()
+    # for xp in xflat:
+    #     if xp > 0:
+    #         outlist.append(xp)
+    #     else:
+    #         outlist.append(0)
+    # outlist = np.array(outlist)
+    # outlist = outlist.reshape(x.shape)
+    outlist = x.clip(min=0)
     return outlist
 
 
@@ -67,8 +70,14 @@ def add_bias(x):
     return X_new
 
 
-def diff_cost(yl, lastlyr):
+def quad_cost_p(yl, lastlyr):
     return yl - lastlyr
+
+
+def cross_ent_cost_p(yl, lastlyr):
+    lastlyr -= 0.00000001
+    cost = (yl - lastlyr) / ((1 - lastlyr) * lastlyr)  # Is the sign correct?
+    return cost
 
 
 ###################################### Import data ##############################################
@@ -123,7 +132,6 @@ else:
     X = np.array([[0, 0, 0, 1],
                  [0, 1, 0, 0],
                  [1, 0, 0, 0],
-                 [0, 0, 1, 0],
                  [0, 1, 1, 0],
                  [1, 1, 1, 0],
                  [0, 0, 1, 1]])
@@ -131,10 +139,19 @@ else:
     y = np.array([[1],
                   [1],
                   [1],
-                  [1],
                   [0],
                   [0],
                   [0]])
+
+    testX = np.array([[1, 0, 1, 0],
+                      [1, 0, 1, 1],
+                      [0, 0, 1, 0],
+                      [1, 0, 0, 1]])
+
+    testy = np.array([[0],
+                      [0],
+                      [1],
+                      [0]])
 
 # Data normalisation
 
@@ -149,8 +166,12 @@ for i in range(len(X[0])):
 np.random.seed(1)
 
 act_fcn = sigmoid
-cost_fcn = diff_cost
-LR = 0.01
+cost_fcn_p = cross_ent_cost_p
+# LR = 0.01  # This learning rate works for sigmoid, simple BDT set, quad_cost
+LR = 10**(-4)  # This learning rate works for sigmoid, simple BDT set, cross_ent_cost
+# LR = 10**(-10)
+Nit = 15000
+Nprint = 1000
 layersize = [len(X[0]), len(X[0])*4, len(X[0])*3, 1]
 bias = False
 
@@ -179,9 +200,7 @@ layers = [0] * NLayers
 lerrors = [0] * NLayers
 ldeltas = [0] * NLayers
 
-Nit = 15000
-
-for j in range(Nit):
+for j in range(Nit + 1):
 
     ############ FEED FORWARD ###########
 
@@ -194,7 +213,7 @@ for j in range(Nit):
 
     ########### FEED BACKWARDS #########
 
-    lerrors[-1] = cost_fcn(y, layers[-1])
+    lerrors[-1] = cost_fcn_p(y, layers[-1])
     for i in range(NLayers - 1, 0, -1):
 
         ldeltas[i] = lerrors[i] * act_fcn(layers[i], deriv=True)
@@ -208,9 +227,10 @@ for j in range(Nit):
             lerrors[i - 1] = ldeltas[i].dot(weights[i - 1].T)
             weights[i - 1] += layers[i - 1].T.dot(ldeltas[i]) * LR
 
-    if j % 1000 == 0:
+    if j % Nprint == 0:
         print("\nj is %i out of %i"%(j, Nit))
-        print("The error has been decreased to:" + str(np.mean(np.abs(lerrors[-1]))))
+        print("The error has been decreased to %f, given the chosen cost fcn. "
+              "The linear error is %f."%(np.mean(np.abs(lerrors[-1])), np.mean(np.abs(quad_cost_p(y, layers[-1])))))
 
 ###################################### Test the network #########################################################
 
@@ -224,4 +244,4 @@ testlayers[0] = testX
 for i in range(1, NLayers):
     testlayers[i] = act_fcn(np.dot(testlayers[i-1], weights[i-1]))
 
-print("The error for the test set is:" + str(np.mean(np.abs(testy - testlayers[-1]))))
+print("The linear error for the test set is: " + str(np.mean(np.abs(testy - testlayers[-1]))))
