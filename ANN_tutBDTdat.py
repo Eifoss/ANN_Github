@@ -61,14 +61,14 @@ def relumod(x, deriv=False):
     return outlist
 
 
-def add_bias(x, how='column'):
-    if how == 'column':
-        X_new = np.ones((x.shape[0], x.shape[1] + 1))
-        X_new[:, 1:] = x
-    elif how == 'row':
-        X_new = np.ones((x.shape[0] + 1, x.shape[1]))
-        X_new[1:, :] = x
+def add_bias(x):
+    X_new = np.ones((x.shape[0], x.shape[1] + 1))
+    X_new[:, 1:] = x
     return X_new
+
+
+def diff_cost(yl, lastlyr):
+    return yl - lastlyr
 
 
 ###################################### Import data ##############################################
@@ -107,6 +107,17 @@ elif usesimBDTdat:
     y = np.append(np.zeros(len(datatrb)), np.ones(len(datatrs)))
     y = y.reshape(len(X), 1)
 
+    testX = np.concatenate((datateb, datates), axis=0)
+
+    for i in range(len(testX[0])):
+        minx = min(testX.T[i])
+        maxx = max(testX.T[i])
+        rangex = abs(minx) + maxx
+        testX.T[i] = testX.T[i] / rangex
+
+    testy = np.append(np.zeros(len(datateb)), np.ones(len(datates)))
+    testy = testy.reshape(len(testX), 1)
+
 else:
 
     X = np.array([[0, 0, 0, 1],
@@ -137,20 +148,20 @@ for i in range(len(X[0])):
 
 np.random.seed(1)
 
-nonlin = sigmoid
+act_fcn = sigmoid
+cost_fcn = diff_cost
 LR = 0.01
 layersize = [len(X[0]), len(X[0])*4, len(X[0])*3, 1]
+bias = False
 
 ###################################### Train the network #########################################################
 
-# Bias
-
-bias = False
+# Add bias to X
 
 if bias:
     X = add_bias(X)
 
-# randomly initialize our weights with mean 0
+# Randomly initialize weights with range -1 to 1
 
 if bias:
 
@@ -176,16 +187,17 @@ for j in range(Nit):
 
     layers[0] = X
     for i in range(1, NLayers):
-        layers[i] = nonlin(np.dot(layers[i-1], weights[i-1]))
+        layers[i] = act_fcn(np.dot(layers[i-1], weights[i-1]))
+
         if bias and not i == NLayers - 1:
             layers[i] = add_bias(layers[i])
 
     ########### FEED BACKWARDS #########
 
-    lerrors[-1] = y - layers[-1]
+    lerrors[-1] = cost_fcn(y, layers[-1])
     for i in range(NLayers - 1, 0, -1):
 
-        ldeltas[i] = lerrors[i] * nonlin(layers[i], deriv=True)
+        ldeltas[i] = lerrors[i] * act_fcn(layers[i], deriv=True)
 
         if bias and i < NLayers - 1:
             ldeltasn = ldeltas[i][:, 1:]
@@ -203,24 +215,13 @@ for j in range(Nit):
 ###################################### Test the network #########################################################
 
 for i in range(5):
-    print("\n%i"%i)
+    print("\n%i, training set"%i)
     print("Class should have been %i, the ANN guesses %f"%(y[i], layers[-1][i]))
 
-telayers = [0] * NLayers
-teX = np.concatenate((datateb, datates), axis=0)
-
-for i in range(len(teX[0])):
-    minx = min(teX.T[i])
-    maxx = max(teX.T[i])
-    rangex = abs(minx) + maxx
-    teX.T[i] = teX.T[i]/rangex
-
-telayers[0] = teX
+testlayers = [0] * NLayers
+testlayers[0] = testX
 
 for i in range(1, NLayers):
-    telayers[i] = nonlin(np.dot(telayers[i-1], weights[i-1]))
+    testlayers[i] = act_fcn(np.dot(testlayers[i-1], weights[i-1]))
 
-tey = np.append(np.zeros(len(datateb)), np.ones(len(datates)))
-tey = tey.reshape(len(teX), 1)
-
-print("The error for the test set is:" + str(np.mean(np.abs(tey - telayers[-1]))))
+print("The error for the test set is:" + str(np.mean(np.abs(testy - testlayers[-1]))))
