@@ -82,8 +82,8 @@ def cross_ent_cost_p(yl, lastlyr):
 
 ###################################### Import data ##############################################
 
-useadvBDTdat = False
-usesimBDTdat = True
+useadvBDTdat = True
+usesimBDTdat = False
 
 if useadvBDTdat:
 
@@ -100,6 +100,19 @@ if useadvBDTdat:
     y = np.array(y)
     y = y.reshape(len(datatrain), 1)
     X = np.array(datatrain)
+
+    testX = np.array(datatest)
+
+    for i in range(len(testX[0])):
+        minx = min(testX.T[i])
+        maxx = max(testX.T[i])
+        rangex = abs(minx) + maxx
+        testX.T[i] = testX.T[i] / rangex
+
+    Ndhalft = len(datatest) / 2
+    testy = [0, 1] * int(Ndhalft)
+    testy = np.array(testy)
+    testy = testy.reshape(len(datatest), 1)
 
 elif usesimBDTdat:
 
@@ -167,13 +180,35 @@ np.random.seed(1)
 
 act_fcn = sigmoid
 cost_fcn_p = cross_ent_cost_p
-# LR = 0.01  # This learning rate works for sigmoid, simple BDT set, quad_cost
-LR = 10**(-4)  # This learning rate works for sigmoid, simple BDT set, cross_ent_cost
-# LR = 10**(-10)
-Nit = 15000
-Nprint = 1000
-layersize = [len(X[0]), len(X[0])*4, len(X[0])*3, 1]
+LR = 10**(-4)
+Nit = 50000
+Nprint = 100
+layersize = [len(X[0]), len(X[0])*5, len(X[0])*5, 1]
 bias = False
+
+print("\n" + "Current Settings: LR = %f, NLayers = %i"%(LR, len(layersize)))
+
+
+# Set #1 of settings for BDTsimdat
+
+# act_fcn = sigmoid
+# cost_fcn_p = quad_cost_p
+# LR = 0.01
+# Nit = 15000
+# Nprint = 1000
+# layersize = [len(X[0]), len(X[0])*4, len(X[0])*3, 1]
+# bias = False
+
+
+# Set #2 of settings for BDTsimdat
+
+# act_fcn = sigmoid
+# cost_fcn_p = cross_ent_cost_p
+# LR = 10**(-4)
+# Nit = 15000
+# Nprint = 1000
+# layersize = [len(X[0]), len(X[0])*4, len(X[0])*3, 1]
+# bias = False
 
 ###################################### Train the network #########################################################
 
@@ -235,7 +270,7 @@ for j in range(Nit + 1):
 ###################################### Test the network #########################################################
 
 for i in range(5):
-    print("\n%i, training set"%i)
+    print("\n" + "%i, training set"%i)
     print("Class should have been %i, the ANN guesses %f"%(y[i], layers[-1][i]))
 
 testlayers = [0] * NLayers
@@ -244,4 +279,4 @@ testlayers[0] = testX
 for i in range(1, NLayers):
     testlayers[i] = act_fcn(np.dot(testlayers[i-1], weights[i-1]))
 
-print("The linear error for the test set is: " + str(np.mean(np.abs(testy - testlayers[-1]))))
+print("\n" + "The linear error for the test set is: " + str(np.mean(np.abs(testy - testlayers[-1]))))
