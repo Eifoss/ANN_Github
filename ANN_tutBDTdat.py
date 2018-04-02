@@ -1,4 +1,5 @@
 import numpy as np
+from sklearn.neural_network import MLPClassifier
 
 
 def sigmoid(x, deriv=False):
@@ -68,6 +69,14 @@ def add_bias(x):
     X_new = np.ones((x.shape[0], x.shape[1] + 1))
     X_new[:, 1:] = x
     return X_new
+
+
+def cross_ent_cost(yl, lastlyr):
+    return -(1.0 / len(X)) * (np.dot(np.log(lastlyr), yl.T) + np.dot(np.log(1 - lastlyr), (1 - yl).T))
+
+
+def quad_cost(yl, lastlyr):
+    return (yl - lastlyr)**2
 
 
 def quad_cost_p(yl, lastlyr):
@@ -180,10 +189,11 @@ np.random.seed(1)
 
 act_fcn = sigmoid
 cost_fcn_p = cross_ent_cost_p
-LR = 10**(-4)
-Nit = 50000
+LR = 10**(-3.5)
+Nit = 15000
 Nprint = 100
-layersize = [len(X[0]), len(X[0])*5, len(X[0])*5, 1]
+mbatchsize = 1
+layersize = [len(X[0]), len(X[0])*10, len(X[0])*5, len(X[0])*5, 1]
 bias = False
 
 print("\n" + "Current Settings: LR = %f, NLayers = %i"%(LR, len(layersize)))
@@ -210,6 +220,17 @@ print("\n" + "Current Settings: LR = %f, NLayers = %i"%(LR, len(layersize)))
 # layersize = [len(X[0]), len(X[0])*4, len(X[0])*3, 1]
 # bias = False
 
+
+# Set #1 of settings for BDTadvdat
+
+# act_fcn = sigmoid
+# cost_fcn_p = cross_ent_cost_p
+# LR = 10**(-4)
+# Nit = 10000
+# Nprint = 100
+# layersize = [len(X[0]), len(X[0])*10, len(X[0])*5, len(X[0])*5, 1]
+# bias = False
+
 ###################################### Train the network #########################################################
 
 # Add bias to X
@@ -229,43 +250,50 @@ else:
     for i in range(0, len(layersize) - 1):
         weights[i] = 2 * np.random.random((layersize[i], layersize[i + 1])) - 1
 
+Nbatches = int(len(X) / mbatchsize) + 1
 NLayers = len(layersize)
 
 layers = [0] * NLayers
 lerrors = [0] * NLayers
 ldeltas = [0] * NLayers
 
+X_mb = np.array_split(X, Nbatches)
+y_mb = np.array_split(y, Nbatches)
+
 for j in range(Nit + 1):
 
-    ############ FEED FORWARD ###########
+    for imb in range(Nbatches):
 
-    layers[0] = X
-    for i in range(1, NLayers):
-        layers[i] = act_fcn(np.dot(layers[i-1], weights[i-1]))
+        ############ FEED FORWARD ###########
 
-        if bias and not i == NLayers - 1:
-            layers[i] = add_bias(layers[i])
+        layers[0] = X_mb[imb]
 
-    ########### FEED BACKWARDS #########
+        for i in range(1, NLayers):
+            layers[i] = act_fcn(np.dot(layers[i-1], weights[i-1]))
 
-    lerrors[-1] = cost_fcn_p(y, layers[-1])
-    for i in range(NLayers - 1, 0, -1):
+            if bias and not i == NLayers - 1:
+                layers[i] = add_bias(layers[i])
 
-        ldeltas[i] = lerrors[i] * act_fcn(layers[i], deriv=True)
+        ########### FEED BACKWARDS #########
 
-        if bias and i < NLayers - 1:
-            ldeltasn = ldeltas[i][:, 1:]
-            lerrors[i - 1] = ldeltasn.dot(weights[i - 1].T)
-            weights[i - 1] += layers[i - 1].T.dot(ldeltasn) * LR
+        lerrors[-1] = cost_fcn_p(y_mb[imb], layers[-1])
+        for i in range(NLayers - 1, 0, -1):
 
-        else:
-            lerrors[i - 1] = ldeltas[i].dot(weights[i - 1].T)
-            weights[i - 1] += layers[i - 1].T.dot(ldeltas[i]) * LR
+            ldeltas[i] = lerrors[i] * act_fcn(layers[i], deriv=True)
+
+            if bias and i < NLayers - 1:
+                ldeltasn = ldeltas[i][:, 1:]
+                lerrors[i - 1] = ldeltasn.dot(weights[i - 1].T)
+                weights[i - 1] += layers[i - 1].T.dot(ldeltasn) * LR
+
+            else:
+                lerrors[i - 1] = ldeltas[i].dot(weights[i - 1].T)
+                weights[i - 1] += layers[i - 1].T.dot(ldeltas[i]) * LR
 
     if j % Nprint == 0:
         print("\nj is %i out of %i"%(j, Nit))
         print("The error has been decreased to %f, given the chosen cost fcn. "
-              "The linear error is %f."%(np.mean(np.abs(lerrors[-1])), np.mean(np.abs(quad_cost_p(y, layers[-1])))))
+              "The linear error is %f."%(np.mean(np.abs(lerrors[-1])), np.mean(np.abs(quad_cost_p(y[imb], layers[-1])))))
 
 ###################################### Test the network #########################################################
 
