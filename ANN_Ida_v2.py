@@ -1,5 +1,23 @@
 import numpy as np
 import matplotlib.pyplot as plt
+from scipy.stats import gaussian_kde
+
+
+def kdeplot2(dat1, dat2, par=0.37):
+    mini = min([min(dat1), min(dat2)])
+    maxi = max([max(dat1), max(dat2)])
+    xl = np.linspace(mini, maxi, num=500)
+    kdeobj1 = gaussian_kde(dat1, bw_method=par)
+    kde1 = kdeobj1.evaluate(xl)
+    kdeobj2 = gaussian_kde(dat2, bw_method=par)
+    kde2 = kdeobj2.evaluate(xl)
+
+    # plt.figure()
+    f, ax = plt.subplots()
+    ax.plot(xl, kde1)
+    ax.plot(xl, kde2)
+
+    return ax
 
 
 def sigmoid(x, deriv=False):
@@ -190,10 +208,10 @@ for i in range(len(X[0])):
 np.random.seed(1)
 
 act_fcn = sigmoid
-cost_fcn_p = quad_cost_p
-cost_fcn = quad_cost
+cost_fcn_p = cross_ent_cost_p
+cost_fcn = cross_ent_cost
 LR = 10**(-4)
-Nit = 15000
+Nit = 20000
 Nprint = 100
 layersize = [len(X[0]), len(X[0])*5, len(X[0])*5, 1]
 bias = False
@@ -220,6 +238,18 @@ print("\n" + "Current Settings: LR = %f, NLayers = %i"%(LR, len(layersize)))
 # Nit = 15000
 # Nprint = 1000
 # layersize = [len(X[0]), len(X[0])*4, len(X[0])*3, 1]
+# bias = False
+
+
+#  Set #1 of settings for BDTadvdat
+
+# act_fcn = sigmoid
+# cost_fcn_p = cross_ent_cost_p
+# cost_fcn = cross_ent_cost
+# LR = 10**(-4)
+# Nit = 20000
+# Nprint = 100
+# layersize = [len(X[0]), len(X[0])*5, len(X[0])*5, 1]
 # bias = False
 
 ###################################### Train the network #########################################################
@@ -320,5 +350,119 @@ print("\n" + "The cost for the test set is %f. The quad cost for the test set is
       "%f." % (np.sum(cost_fcn(testy, testlayers[-1])), np.sum(quad_cost(testy, testlayers[-1]))))
 print("The linear error for the test set is: " + str(np.mean(np.abs(testy - testlayers[-1]))))
 
+
+###################################### Histograms #########################################################
+
+# Training set
+
+plt.figure()
+binwidth = 0.04
+
+i_1, cake = np.where(y == 1)  # The cake is a lie, don't use it
+
+# y_pred_s = [x for i, x in enumerate(layers[-1]) if y[i]==1]  # predicted y for real signal
+# y_pred_b = [x for i, x in enumerate(layers[-1]) if y[i]==0]  # predicted y for real background
+
+y_pred_s = []  # predicted y for real signal
+y_pred_b = []  # predicted y for real background
+
+
+for i, x in enumerate(layers[-1]):
+    if y[i] == 1:
+        y_pred_s = np.append(y_pred_s, x)
+    else:
+        y_pred_b = np.append(y_pred_b, x)
+    # if i % 500 == 0:
+    #     print(i, " of ", len(layers[-1]))
+
+binwidth = 0.05
+plt.hist(y_pred_s, 20, range=[0, 1], normed=0, facecolor='red', alpha=0.5)
+# counts, bins, # patches = #bins=range(min(y_pred_s), max(y_pred_s) + binwidth, binwidth)
+plt.hist(y_pred_b, 20,range=[0, 1], normed=0, facecolor='blue', alpha=0.5)
+plt.xlabel(' Output layer')
+plt.ylabel(' Frequency')
+
+plt.legend(["Signal", "Background"], loc='upper center')
+plt.title("Training set", fontsize=16)
+
+# plt.xlim(0,1)
+# plt.ylim(0,4)
+
+dat1 = y_pred_s
+dat2 = y_pred_b
+par = 0.37
+
+mini = min([min(dat1), min(dat2)])
+maxi = max([max(dat1), max(dat2)])
+xl = np.linspace(mini, maxi, num=500)
+kdeobj1 = gaussian_kde(dat1, bw_method=par)
+kde1 = kdeobj1.evaluate(xl)
+kdeobj2 = gaussian_kde(dat2, bw_method=par)
+kde2 = kdeobj2.evaluate(xl)
+
+plt.figure()
+plt.plot(xl, kde1, color='red')
+plt.plot(xl, kde2, color='blue')
+
+plt.xlabel(' Output layer')
+plt.ylabel(' Frequency')
+
+plt.legend(["Signal", "Background"], loc='upper center')
+plt.title("Training set", fontsize=16)
+
+
+# Test set
+
+plt.figure()
+binwidth = 0.04
+
+i_1, cake = np.where(testy == 1)  # The cake is a lie, don't use it
+
+# y_pred_s = [x for i, x in enumerate(layers[-1]) if y[i]==1]  # predicted y for real signal
+# y_pred_b = [x for i, x in enumerate(layers[-1]) if y[i]==0]  # predicted y for real background
+
+y_pred_s = []  # predicted y for real signal
+y_pred_b = []  # predicted y for real background
+
+
+for i, x in enumerate(testlayers[-1]):
+    if testy[i] == 1:
+        y_pred_s = np.append(y_pred_s, x)
+    else:
+        y_pred_b = np.append(y_pred_b, x)
+    # if i % 500 == 0:
+    #     print(i, " of ", len(testlayers[-1]))
+
+binwidth = 0.05
+plt.hist(y_pred_s, 20, range=[0, 1], normed=0, facecolor='red', alpha=0.5)
+# counts, bins, # patches = #bins=range(min(y_pred_s), max(y_pred_s) + binwidth, binwidth)
+plt.hist(y_pred_b, 20,range=[0, 1], normed=0, facecolor='blue', alpha=0.5)
+plt.xlabel(' Output layer')
+plt.ylabel(' Frequency')
+
+plt.legend(["Signal", "Background"], loc='upper center')
+plt.title("Test set", fontsize=16)
+
+dat1 = y_pred_s
+dat2 = y_pred_b
+par = 0.37
+
+mini = min([min(dat1), min(dat2)])
+maxi = max([max(dat1), max(dat2)])
+xl = np.linspace(mini, maxi, num=500)
+kdeobj1 = gaussian_kde(dat1, bw_method=par)
+kde1 = kdeobj1.evaluate(xl)
+kdeobj2 = gaussian_kde(dat2, bw_method=par)
+kde2 = kdeobj2.evaluate(xl)
+
+plt.figure()
+plt.plot(xl, kde1, color='red')
+plt.plot(xl, kde2, color='blue')
+
+plt.xlabel(' Output layer')
+plt.ylabel(' Frequency')
+
+plt.legend(["Signal", "Background"], loc='upper center')
+plt.title("Test set", fontsize=16)
 
 plt.show()
