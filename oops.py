@@ -1,18 +1,17 @@
 import numpy as np
 import matplotlib.pyplot as plt
 from scipy.stats import gaussian_kde
-import scikitplot as skplt
 
 
 def StringMatToFloat(inlist):
     if type(inlist[0]) == list:
-        outlist=[]
+        outlist = []
         for i in range(len(inlist)):
             outlist.append([])
             for j in inlist[i]:
                 outlist[i].append(float(j))
     else:
-        outlist=[]
+        outlist = []
         for i in inlist:
             outlist.append(float(i))
     return outlist
@@ -32,7 +31,7 @@ def ImportData(filepath, NTraining, NValidation, seperator, Header=True):
                 data.append(StringMatToFloat(line.split(seperator)))
             elif count > NTraining:
                 valdata.append(StringMatToFloat(line.split(seperator)))
-            if count >= NTraining+NValidation:
+            if count >= NTraining + NValidation:
                 break
         return data, valdata, Namelist
     else:
@@ -42,7 +41,7 @@ def ImportData(filepath, NTraining, NValidation, seperator, Header=True):
                 data.append(StringMatToFloat(line.split(seperator)))
             elif count > NTraining:
                 valdata.append(StringMatToFloat(line.split(seperator)))
-            if count > NTraining+NValidation+1:
+            if count > NTraining + NValidation + 1:
                 break
         return data, valdata
 
@@ -118,12 +117,12 @@ def add_bias(x):
 
 def cross_ent_cost(yl, lastlyr):
     yl = yl.T
-    lastlyr = abs(lastlyr.T)
+    lastlyr = lastlyr.T
     return -(1.0 / len(X)) * (np.dot(np.log(lastlyr), yl.T) + np.dot(np.log(1 - lastlyr), (1 - yl).T))
 
 
 def quad_cost(yl, lastlyr):
-    return (yl - lastlyr)**2
+    return (yl - lastlyr) ** 2
 
 
 def cross_ent_cost_p(yl, lastlyr):
@@ -149,16 +148,22 @@ if useadvBDTdat:
     data = data.T
     data = data[1:len(data)]
     data = data.T
-    endtrain = int(len(data)/2)
+    endtrain = int(len(data) / 2)
     datatest = data[endtrain:len(data)]
     datatrain = data[0:endtrain]
-    Ndhalf = len(datatrain)/2
-    y = [0, 1]*int(Ndhalf)
+    Ndhalf = len(datatrain) / 2
+    y = [0, 1] * int(Ndhalf)
     y = np.array(y)
     y = y.reshape(len(datatrain), 1)
     X = np.array(datatrain)
 
     testX = np.array(datatest)
+
+    for i in range(len(testX[0])):
+        minx = min(testX.T[i])
+        maxx = max(testX.T[i])
+        rangex = abs(minx) + maxx
+        testX.T[i] = testX.T[i] / rangex
 
     Ndhalft = len(datatest) / 2
     testy = [0, 1] * int(Ndhalft)
@@ -182,11 +187,17 @@ elif usesimBDTdat:
 
     testX = np.concatenate((datateb, datates), axis=0)
 
+    for i in range(len(testX[0])):
+        minx = min(testX.T[i])
+        maxx = max(testX.T[i])
+        rangex = abs(minx) + maxx
+        testX.T[i] = testX.T[i] / rangex
+
     testy = np.append(np.zeros(len(datateb)), np.ones(len(datates)))
     testy = testy.reshape(len(testX), 1)
 
 elif useParticleDat:
-    data, valdata = ImportData("/Users/idastoustrup/Documents/AnvStat2ProjektData/MC05_Shuffled_NoHeader.csv", 1e4, 1e4,
+    data, valdata = ImportData("/Users/idastoustrup/Documents/AnvStat2ProjektData/MC05_Shuffled_NoHeader.csv", 1e4, 1e3,
                                ",", Header=False)
     # header = ["p_Rhad1","p_Rhad","p_f3","p_weta2","p_Rphi","p_Reta","p_Eratio","p_f1","p_eta","p_ptPU30",
     # "averageInteractionsPerCrossing","p_etcone20","p_etcone30","p_etcone40","p_etcone20ptCorrection",
@@ -223,11 +234,11 @@ elif useParticleDat:
 else:
 
     X = np.array([[0, 0, 0, 1],
-                 [0, 1, 0, 0],
-                 [1, 0, 0, 0],
-                 [0, 1, 1, 0],
-                 [1, 1, 1, 0],
-                 [0, 0, 1, 1]])
+                  [0, 1, 0, 0],
+                  [1, 0, 0, 0],
+                  [0, 1, 1, 0],
+                  [1, 1, 1, 0],
+                  [0, 0, 1, 1]])
 
     y = np.array([[1],
                   [1],
@@ -252,7 +263,7 @@ for i in range(len(X[0])):
     minx = min(X.T[i])
     maxx = max(X.T[i])
     rangex = abs(minx) + maxx
-    X.T[i] = X.T[i]/rangex
+    X.T[i] = X.T[i] / rangex
 
 for i in range(len(testX[0])):
     minx = min(testX.T[i])
@@ -267,14 +278,13 @@ np.random.seed(1)
 act_fcn = sigmoid
 cost_fcn_p = cross_ent_cost_p
 cost_fcn = cross_ent_cost
-LR = 10**(-4)
-Nit = 10000
+LR = 10 ** (-4)
+Nit = 5000
 Nprint = 100
-layersize = [len(X[0]), len(X[0])*5, len(X[0])*5, 1]
+layersize = [len(X[0]), len(X[0]) * 5, len(X[0]) * 5, 1]
 bias = False
 
-print("\n" + "Current Settings: LR = %f, NLayers = %i"%(LR, len(layersize)))
-
+print("\n" + "Current Settings: LR = %f, NLayers = %i" % (LR, len(layersize)))
 
 # Set #1 of settings for BDTsimdat
 
@@ -321,7 +331,7 @@ if bias:
 if bias:
 
     weights = [0] * len(layersize)
-    for i in range(0, len(layersize)-1):
+    for i in range(0, len(layersize) - 1):
         weights[i] = 2 * np.random.random((layersize[i] + 1, layersize[i + 1])) - 1
 else:
     weights = [0] * len(layersize)
@@ -344,7 +354,7 @@ for j in range(Nit + 1):
 
     layers[0] = X
     for i in range(1, NLayers):
-        layers[i] = act_fcn(np.dot(layers[i-1], weights[i-1]))
+        layers[i] = act_fcn(np.dot(layers[i - 1], weights[i - 1]))
 
         if bias and not i == NLayers - 1:
             layers[i] = add_bias(layers[i])
@@ -368,9 +378,9 @@ for j in range(Nit + 1):
     if j % Nprint == 0:
         cost_val = np.sum(cost_fcn(y, layers[-1]))
         cost_p_val = np.mean(np.abs(lerrors[-1]))
-        print("\nj is %i out of %i"%(j, Nit))
+        print("\nj is %i out of %i" % (j, Nit))
         print("The derivative of the cost is currently %f. The derivative of the quad "
-              "cost is %f."%(cost_p_val, np.mean(np.abs(quad_cost_p(y, layers[-1])))))
+              "cost is %f." % (cost_p_val, np.mean(np.abs(quad_cost_p(y, layers[-1])))))
         print("The cost has been decreased to %f. The quad "
               "cost is %f." % (cost_val, np.sum(quad_cost(y, layers[-1]))))
         j_comp.append(j)
@@ -394,19 +404,18 @@ plt.savefig("Cost_p_plot.pdf")
 ###################################### Test the network #########################################################
 
 for i in range(5):
-    print("\n" + "%i, training set"%i)
-    print("Class should have been %i, the ANN guesses %f"%(y[i], layers[-1][i]))
+    print("\n" + "%i, training set" % i)
+    print("Class should have been %i, the ANN guesses %f" % (y[i], layers[-1][i]))
 
 testlayers = [0] * NLayers
 testlayers[0] = testX
 
 for i in range(1, NLayers):
-    testlayers[i] = act_fcn(np.dot(testlayers[i-1], weights[i-1]))
+    testlayers[i] = act_fcn(np.dot(testlayers[i - 1], weights[i - 1]))
 
 print("\n" + "The cost for the test set is %f. The quad cost for the test set is "
-      "%f." % (np.sum(cost_fcn(testy, testlayers[-1])), np.sum(quad_cost(testy, testlayers[-1]))))
+             "%f." % (np.sum(cost_fcn(testy, testlayers[-1])), np.sum(quad_cost(testy, testlayers[-1]))))
 print("The linear error for the test set is: " + str(np.mean(np.abs(testy - testlayers[-1]))))
-
 
 ###################################### Histograms #########################################################
 
@@ -423,7 +432,6 @@ i_1, cake = np.where(y == 1)  # The cake is a lie, don't use it
 y_pred_s = []  # predicted y for real signal
 y_pred_b = []  # predicted y for real background
 
-
 for i, x in enumerate(layers[-1]):
     if y[i] == 1:
         y_pred_s = np.append(y_pred_s, x)
@@ -435,7 +443,7 @@ for i, x in enumerate(layers[-1]):
 binwidth = 0.05
 plt.hist(y_pred_s, 20, range=[0, 1], normed=0, facecolor='red', alpha=0.5)
 # counts, bins, # patches = #bins=range(min(y_pred_s), max(y_pred_s) + binwidth, binwidth)
-plt.hist(y_pred_b, 20,range=[0, 1], normed=0, facecolor='blue', alpha=0.5)
+plt.hist(y_pred_b, 20, range=[0, 1], normed=0, facecolor='blue', alpha=0.5)
 plt.xlabel(' Output layer')
 plt.ylabel(' Frequency')
 
@@ -468,7 +476,6 @@ plt.legend(["Signal", "Background"], loc='upper center')
 plt.title("Training set", fontsize=16)
 plt.savefig("hist_train.pdf")
 
-
 # Test set
 
 plt.figure()
@@ -482,7 +489,6 @@ i_1, cake = np.where(testy == 1)  # The cake is a lie, don't use it
 y_pred_s = []  # predicted y for real signal
 y_pred_b = []  # predicted y for real background
 
-
 for i, x in enumerate(testlayers[-1]):
     if testy[i] == 1:
         y_pred_s = np.append(y_pred_s, x)
@@ -494,7 +500,7 @@ for i, x in enumerate(testlayers[-1]):
 binwidth = 0.05
 plt.hist(y_pred_s, 20, range=[0, 1], normed=0, facecolor='red', alpha=0.5)
 # counts, bins, # patches = #bins=range(min(y_pred_s), max(y_pred_s) + binwidth, binwidth)
-plt.hist(y_pred_b, 20,range=[0, 1], normed=0, facecolor='blue', alpha=0.5)
+plt.hist(y_pred_b, 20, range=[0, 1], normed=0, facecolor='blue', alpha=0.5)
 plt.xlabel(' Output layer')
 plt.ylabel(' Frequency')
 
@@ -523,21 +529,5 @@ plt.ylabel(' Frequency')
 
 plt.legend(["Signal", "Background"], loc='upper center')
 plt.title("Test set", fontsize=16)
-
-
-###################################### ROC Curve #########################################################
-
-# True vs. false positive rate
-fpr, tpr, threshold = skplt.metrics.roc_curve(testy, testlayers[-1])
-
-plt.title('Receiver Operating Characteristic', fontsize=16)
-#plt.plot(fpr, tpr, 'b', label = 'AUC = %0.2f' % roc_auc)
-plt.plot(fpr, tpr, 'b')
-plt.plot([0, 1], [0, 1], 'r--')
-plt.legend(["Our ANN", "Random guess"], loc='lower right')
-plt.xlim([0, 1])
-plt.ylim([0, 1])
-plt.ylabel('True Positive Rate')
-plt.xlabel('False Positive Rate')
 
 plt.show()
